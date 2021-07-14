@@ -259,14 +259,27 @@ def generate_interaction_distance_one_image(img, lab, seg, seed_org, transform_t
     return [fg_dis, bg_dis, fg_seeds, bg_seeds]
 
 
-def get_3dimage_largest_component(img):
-    s = ndimage.generate_binary_structure(3, 1)  # iterate structure
-    labeled_array, numpatches = ndimage.label(img, s)  # labeling
-    sizes = ndimage.sum(img, labeled_array, range(1, numpatches+1))
+def get_largest_component(image):
+    """
+    get the largest component from 2D or 3D binary image
+    image: nd array
+    """
+    dim = len(image.shape)
+    if(image.sum() == 0 ):
+        print('the largest component is null')
+        return image
+    if(dim == 2):
+        s = ndimage.generate_binary_structure(2,1)
+    elif(dim == 3):
+        s = ndimage.generate_binary_structure(3,1)
+    else:
+        raise ValueError("the dimension number should be 2 or 3")
+    labeled_array, numpatches = ndimage.label(image, s)
+    sizes = ndimage.sum(image, labeled_array, range(1, numpatches + 1))
     max_label = np.where(sizes == sizes.max())[0] + 1
-    labeled_array == max_label
-    centroid = measure.regionprops(labeled_array)[0]["centroid"]
-    return labeled_array, centroid
+    output = np.asarray(labeled_array == max_label, np.uint8)
+    centroid = measure.regionprops(output)[0]["centroid"]
+    return  output, centroid
 
 
 def extends_points(seed):
@@ -292,7 +305,7 @@ def generate_interaction_distance_one_image_validation(img, lab, seg, seed_org, 
     if fg.sum() < 100:
         fg_seeds = fore_seed_org_down
     else:
-        largest_error_region, centroid = get_3dimage_largest_component(fg)
+        largest_error_region, centroid = get_largest_component(fg)
         fg_seeds = np.zeros_like(fg)
         fg_seeds[int(centroid[0]), int(centroid[1]), int(centroid[2])] = 1
         fg_seeds = extends_points(fg_seeds)
@@ -311,7 +324,7 @@ def generate_interaction_distance_one_image_validation(img, lab, seg, seed_org, 
     if bg.sum() < 100:
         bg_seeds = back_seed_org_down
     else:
-        largest_error_region, centroid = get_3dimage_largest_component(bg)
+        largest_error_region, centroid = get_largest_component(bg)
         bg_seeds = np.zeros_like(bg)
         bg_seeds[int(centroid[0]), int(centroid[1]), int(centroid[2])] = 1
         bg_seeds = extends_points(bg_seeds)
@@ -384,9 +397,9 @@ def generate_simulation_deepigeos_validation(img, lab, pred, seed_org, transform
     return [inputs, geos_maps, seeds]
 
 # if __name__ == "__main__":
-#     img_path = "/home/SENSETIME/luoxiangde/Projects/RInterSeg/data/BraTS2018/autoSeg/Brats18_TCIA02_322_1_img.nii.gz"
-#     lab_path = "/home/SENSETIME/luoxiangde/Projects/RInterSeg/data/BraTS2018/autoSeg/Brats18_TCIA02_322_1_lab.nii.gz"
-#     autoseg_path = "/home/SENSETIME/luoxiangde/Projects/RInterSeg/data/BraTS2018/autoSeg/Brats18_TCIA02_322_1_seg.nii.gz"
+#     img_path = "../data/BraTS2018/autoSeg/Brats18_TCIA02_322_1_img.nii.gz"
+#     lab_path = "../data/BraTS2018/autoSeg/Brats18_TCIA02_322_1_lab.nii.gz"
+#     autoseg_path = "../data/BraTS2018/autoSeg/Brats18_TCIA02_322_1_seg.nii.gz"
 #     image = nifity_to_array(img_path)
 #     image = itensity_normalize_one_volume(image)
 #     label = nifity_to_array(lab_path)
